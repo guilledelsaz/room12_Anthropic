@@ -9,16 +9,62 @@ Where you edit:   grep -n '✏' agent.py   (six marks, one per place)
 Steps and gates:  https://anthropicpartnerbasecamp.bts.com/
 """
 from __future__ import annotations
+from pathlib import Path
 from typing import Any, Dict, List
 from support import (MODEL, SYSTEM_PROMPT, call_local, execute_tool, mcp_client,
                      new_session, next_available_day, record_tool_result,
                      runtime_preamble)
 
+_FARE_RULES_PATH = Path(__file__).parent / "data" / "americas" / "fare_rules_excerpt.md"
+
+def fare_rules():
+    """Return the full Larkspur fare rules and Customer Commitment handbook text."""
+    return _FARE_RULES_PATH.read_text(encoding="utf-8")
+
 MAX_TOOL_CALLS = 8  # Larkspur's own build capped the loop here; then a human takes over.
 
 TONE_ADDENDUM = ""                       # ✏️ Build 4, step 4.1, intelligence lane
-EXTRA_TOOLS: List[Dict[str, Any]] = []   # ✏️ Build 2, step 2.1: schemas for the tools you add
-LOCAL_TOOLS: Dict[str, Any] = {}         # ✏️ Build 2, step 2.1: the functions behind them
+EXTRA_TOOLS: List[Dict[str, Any]] = [    # ✏️ Build 2, step 2.1: schemas for the tools you add
+    {
+        "name": "next_available_day",
+        "description": (
+            "Find the earliest date with available seats on any Larkspur flight between "
+            "two airports, on or after a given date. Use this after a cancellation or "
+            "long delay to tell the customer the soonest they can realistically depart, "
+            "before searching or holding a specific seat."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "origin": {"type": "string", "description": "IATA airport code, e.g. DEN"},
+                "dest": {"type": "string", "description": "IATA airport code, e.g. AUS"},
+                "date": {"type": "string", "description": "YYYY-MM-DD, the earliest date to search from"},
+                "cabin": {"type": "string", "description": "Y for economy, J for business. Defaults to Y."},
+            },
+            "required": ["origin", "dest", "date"],
+        },
+    },
+    {
+        "name": "fare_rules",
+        "description": (
+            "Return the full Larkspur Customer Commitment and fare rules handbook text: "
+            "fare family rules (change fees, refundability, same-day changes), what "
+            "Larkspur owes for delays and cancellations, care entitlements (meal credits, "
+            "hotel), and what chat automation will and will not do. Call this when a "
+            "customer challenges an entitlement decision, asks why something is not "
+            "covered, or wants to understand what their fare family allows."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {},
+            "required": [],
+        },
+    },
+]
+LOCAL_TOOLS: Dict[str, Any] = {          # ✏️ Build 2, step 2.1: the functions behind them
+    "next_available_day": next_available_day,
+    "fare_rules": fare_rules,
+}
 
 
 def text_of(response) -> str:
@@ -65,19 +111,17 @@ def run_agent(pnr: str, last_name: str, message: str) -> str:            # ✏�
         thinking={"type": "adaptive"}, tools=tools, messages=messages,
     )
 
-    answer = ""
     turns = 1
     while response.stop_reason == "tool_use" and turns < MAX_TOOL_CALLS:
-        messages.append({"role": "assistant", "content": text_of(response)})
+        messages.append({"role": "assistant", "content": response.content})
         messages.append({"role": "user", "content": tool_results(response)})
-        answer = text_of(response)
         response = client.messages.create(
             model=MODEL, max_tokens=4096, system=runtime_preamble() + SYSTEM_PROMPT + TONE_ADDENDUM,
             thinking={"type": "adaptive"}, tools=tools, messages=messages,
         )
         turns += 1
 
-    return answer
+    return text_of(response)
 
 
 def tool_list() -> List[Dict[str, Any]]:                   # ✏️ Build 2, step 2.2
@@ -119,14 +163,20 @@ def build_tools() -> List[Dict[str, Any]]:                 # ✏️ Build 1, ste
                 "type": "object",
                 "properties": {
                     "flight_no": {"type": "string"},
-                    "date": {"type": "string", "description": "MM/DD/YYYY"},
+                    "date": {"type": "string", "description": "YYYY-MM-DD"},
                 },
                 "required": ["flight_no", "date"],
             },
         },
         {
             "name": "search_alternatives",
-            "description": "search",
+            "description": (
+                "Find available Larkspur flights the customer could be rebooked onto after "
+                "a cancellation or disruption. Returns a list of alternative options with "
+                "option_id, flight number, departure time, and seat availability. Call this "
+                "after get_flight_status confirms disruption and before offering the customer "
+                "any alternatives."
+            ),
             "input_schema": {
                 "type": "object",
                 "properties": {"pnr": {"type": "string"}},
