@@ -24,47 +24,8 @@ def fare_rules():
 MAX_TOOL_CALLS = 8  # Larkspur's own build capped the loop here; then a human takes over.
 
 TONE_ADDENDUM = ""                       # ✏️ Build 4, step 4.1, intelligence lane
-EXTRA_TOOLS: List[Dict[str, Any]] = [    # ✏️ Build 2, step 2.1: schemas for the tools you add
-    {
-        "name": "next_available_day",
-        "description": (
-            "Find the earliest date with available seats on any Larkspur flight between "
-            "two airports, on or after a given date. Use this after a cancellation or "
-            "long delay to tell the customer the soonest they can realistically depart, "
-            "before searching or holding a specific seat."
-        ),
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "origin": {"type": "string", "description": "IATA airport code, e.g. DEN"},
-                "dest": {"type": "string", "description": "IATA airport code, e.g. AUS"},
-                "date": {"type": "string", "description": "YYYY-MM-DD, the earliest date to search from"},
-                "cabin": {"type": "string", "description": "Y for economy, J for business. Defaults to Y."},
-            },
-            "required": ["origin", "dest", "date"],
-        },
-    },
-    {
-        "name": "fare_rules",
-        "description": (
-            "Return the full Larkspur Customer Commitment and fare rules handbook text: "
-            "fare family rules (change fees, refundability, same-day changes), what "
-            "Larkspur owes for delays and cancellations, care entitlements (meal credits, "
-            "hotel), and what chat automation will and will not do. Call this when a "
-            "customer challenges an entitlement decision, asks why something is not "
-            "covered, or wants to understand what their fare family allows."
-        ),
-        "input_schema": {
-            "type": "object",
-            "properties": {},
-            "required": [],
-        },
-    },
-]
-LOCAL_TOOLS: Dict[str, Any] = {          # ✏️ Build 2, step 2.1: the functions behind them
-    "next_available_day": next_available_day,
-    "fare_rules": fare_rules,
-}
+EXTRA_TOOLS: List[Dict[str, Any]] = []   # ✏️ Build 2, step 2.1: schemas for the tools you add
+LOCAL_TOOLS: Dict[str, Any] = {}         # ✏️ Build 2, step 2.1: the functions behind them
 
 
 def text_of(response) -> str:
@@ -127,7 +88,7 @@ def run_agent(pnr: str, last_name: str, message: str) -> str:            # ✏�
 def tool_list() -> List[Dict[str, Any]]:                   # ✏️ Build 2, step 2.2
     """Given. Exactly what Claude is offered on every turn; run.py --show-tools
     prints this list."""
-    return build_tools() + EXTRA_TOOLS
+    return build_tools() + EXTRA_TOOLS + mcp_client.tools()
 
 
 # ──────────────────────────────────────────────────────────────────────────────
