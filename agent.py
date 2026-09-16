@@ -24,8 +24,37 @@ def fare_rules():
 MAX_TOOL_CALLS = 8  # Larkspur's own build capped the loop here; then a human takes over.
 
 TONE_ADDENDUM = ""                       # ✏️ Build 4, step 4.1, intelligence lane
-EXTRA_TOOLS: List[Dict[str, Any]] = []   # ✏️ Build 2, step 2.1: schemas for the tools you add
-LOCAL_TOOLS: Dict[str, Any] = {}         # ✏️ Build 2, step 2.1: the functions behind them
+def get_rebooking_window(flight_date: str) -> dict:
+    """Return the valid rebooking date window for a disrupted flight (−1 to +3 days)."""
+    from datetime import date, timedelta
+    d = date.fromisoformat(flight_date)
+    return {
+        "earliest": (d - timedelta(days=1)).isoformat(),
+        "latest": (d + timedelta(days=3)).isoformat(),
+        "note": "Larkspur waiver: rebook any Larkspur flight departing within this window at no fare difference.",
+    }
+
+
+EXTRA_TOOLS: List[Dict[str, Any]] = [    # ✏️ Build 2, step 2.1: schemas for the tools you add
+    {
+        "name": "get_rebooking_window",
+        "description": (
+            "Return the valid rebooking date window Larkspur policy allows after a disruption: "
+            "one day before to three days after the original flight date. Use this to tell the "
+            "customer which dates are covered by the waiver before searching for alternatives."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "flight_date": {"type": "string", "description": "YYYY-MM-DD, the original disrupted flight date"},
+            },
+            "required": ["flight_date"],
+        },
+    },
+]
+LOCAL_TOOLS: Dict[str, Any] = {          # ✏️ Build 2, step 2.1: the functions behind them
+    "get_rebooking_window": get_rebooking_window,
+}
 
 
 def text_of(response) -> str:
