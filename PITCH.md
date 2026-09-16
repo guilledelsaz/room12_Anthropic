@@ -13,6 +13,6 @@ Lever: intelligence
 ## Priya asked
 
 Costs: ~$0.05 per contact on the wire vs $6.90 human. At 530,000 contacts a year, the gap is roughly $3.6M.
-Wrong: A tool failure could leave a customer without an answer. Tone on hostile contacts has no gate yet — the agent stays calm but does not enforce it.
+Wrong: A tool failure could leave a customer without an answer. Tone on hostile contacts has no gate yet — the agent stays calm but does not enforce it. hold_seat does not validate the option it is given, so a hold can be reported to a customer for a flight that was never offered. confirm_rebooking's token gate stops a booking completing, but not the false reassurance.
 Runs it: Guillermo Del Saz.
 Left out: Refunds, hotel approvals, other-airline rebooking, group bookings, unaccompanied minors, baggage tracing — all still go to humans per the handbook.
