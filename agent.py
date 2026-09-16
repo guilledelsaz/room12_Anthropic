@@ -23,7 +23,16 @@ def fare_rules():
 
 MAX_TOOL_CALLS = 8  # Larkspur's own build capped the loop here; then a human takes over.
 
-TONE_ADDENDUM = ""                       # ✏️ Build 4, step 4.1, intelligence lane
+TONE_ADDENDUM = """
+
+TONE AND SAFETY LANE:
+If the customer's message contains abusive language, threats, profanity, or hostility toward staff,
+do not proceed with a normal entitlements response. Instead:
+1. Acknowledge the disruption briefly and calmly — one sentence, no matching their tone.
+2. Call escalate_to_human immediately, with reason="abusive_tone" and a short summary.
+3. Do not call issue_voucher, confirm_rebooking, or offer any resolution pathway.
+A legal threat ("calling my lawyer") is an automatic escalation trigger regardless of tone.
+"""                                      # ✏️ Build 4, step 4.1, intelligence lane
 def get_rebooking_window(flight_date: str) -> dict:
     """Return the valid rebooking date window for a disrupted flight (−1 to +3 days)."""
     from datetime import date, timedelta
