@@ -23,7 +23,15 @@ def fare_rules():
 
 MAX_TOOL_CALLS = 8  # Larkspur's own build capped the loop here; then a human takes over.
 
-TONE_ADDENDUM = ""                       # ✏️ Build 4, step 4.1, intelligence lane
+TONE_ADDENDUM = """
+=== TONE: ABUSIVE OR THREATENING MESSAGES ===
+
+If the customer uses abusive language, insults, or makes legal threats:
+1. Acknowledge the frustration once, briefly and without matching their tone.
+2. Escalate immediately to a human agent using escalate_to_human.
+3. Promise nothing — no refunds, no vouchers, no commitments of any kind.
+Do not proceed with a normal entitlements rundown as though nothing was said.
+"""                       # ✏️ Build 4, step 4.1, intelligence lane
 EXTRA_TOOLS: List[Dict[str, Any]] = []   # ✏️ Build 2, step 2.1: schemas for the tools you add
 LOCAL_TOOLS: Dict[str, Any] = {}         # ✏️ Build 2, step 2.1: the functions behind them
 
